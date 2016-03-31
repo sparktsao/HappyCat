@@ -1,4 +1,4 @@
-# KrapsML
+# HappyCat
 
 ## Introduction
 * a example project about machine leanring
