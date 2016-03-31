@@ -5,7 +5,7 @@
 
 ## Learning
 * cd learning
-* python randomcat.py ../dataset/unittest/ 2 unittest
+* python happycat.py ../dataset/unittest/ 2 unittest
 
 ## Detection
 * cd detection
