@@ -1,6 +1,6 @@
-#---------------------------
-# Spark_Tsao@trend.com.tw
-#---------------------------
+# date: 2016/04/01
+# username: spark
+# description: learning fundation
 
 import os
 import sys
