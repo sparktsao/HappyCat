@@ -1,5 +1,7 @@
 # HappyCat
 
+![](https://github.com/sparktsao/HappyCat/blob/master/happycat.jpg?raw=true)
+
 ## Introduction
 * a example project about machine leanring
 
