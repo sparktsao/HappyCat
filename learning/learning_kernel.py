@@ -15,6 +15,7 @@ import random
 
 KLABEL = {"malicious":1,"normal":0,"spark":2}
 WORKING_KLABEL = 2
+B_MULTICLASS = False
 #========================================
 # General parameters
 nb_folds = 10
@@ -149,15 +150,18 @@ def MyEvaluation(y_test,predicted):
     result = classification_report(y_test,predicted,target_names=target_names)
     print result
 
-    v_precision = precision_score(y_test,predicted, average="macro")#, average='binary')
-    v_recall = recall_score(y_test,predicted, average="macro")#, average='binary')    
+    averagelabel = 'binary'
+    if B_MULTICLASS: averaegelabel = "macro"
+
+    v_precision = precision_score(y_test,predicted, average=averagelabel)
+    v_recall = recall_score(y_test,predicted, average=averagelabel)    
 
     (TP, FP, TN, FN) = perf_measure(y_test, predicted,KLABEL["malicious"])
     return v_precision,v_recall,TP, FP, TN, FN
 
 def getSaveNames(learner,datapath,note,score):
     m_name = learner.split(".")[0]
-    fname = datapath.replace("/","-").replace(".","").strip("-")
+    fname = datapath.replace("/","-").replace("\\","-").replace("\\","-").replace(".","").replace(".","").strip("-")
     fnameMODEL = "M_"+ m_name+"_"+fname+"_"+note
 
     maxprecision = min(4,len(str(score)))
@@ -257,6 +261,9 @@ def DoKFold(data,label,myLearnandValidate):
     return f1,model
 
 def ExpFunc(path1,myLearnandValidate,bIsMulticlass=True,dropcolumns=[]):
+
+    global B_MULTICLASS
+    B_MULTICLASS = bIsMulticlass
 
     # LOAD DATA
     t0 = timeit.default_timer()
