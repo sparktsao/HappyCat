@@ -68,7 +68,7 @@ def TrainAndValidation1(X_train,y_train,X_test,y_test,bEarlyStopByTestData=True)
 
 if  __name__ == '__main__':    
     bMulticlass = False
-    logdata = sparkcore.ExpFunc(path1,TrainAndValidation1,bMulticlass,dropcolumns)
+    logdata = sparkcore.ExpFunc(path1,TrainAndValidation1)
     #============================================================================================    
     logdata.logModel = ("")
     #============================================================================================
