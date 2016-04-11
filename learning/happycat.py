@@ -46,6 +46,8 @@ class RandomCat:
         import random
         r = [random.randint(0,1) for x in testdata]
         return np.asarray(r)
+    def predict_proba(self,testdata):
+        return self.predict(testdata)
     def to_json(self):
         return "meow"
     def save_weights(self,a,overwrite=True):

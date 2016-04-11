@@ -23,7 +23,7 @@ KLABEL = {"malicious":1,"normal":0}
 WORKING_KLABEL = 2
 KLABEL_FOCUS = "malicious"
 B_MULTICLASS = False
-
+RANDOM_STATE = 23310838
 #========================================
 # General parameters
 nb_folds = 10
@@ -105,7 +105,10 @@ def is_collection(x):
 
 def Process(path1,bBalance=False,bIsMulticlass=True,dropcolumns=[],transformers=[]):
     ngroup = 0
-    for fname in os.listdir(path1):
+    f_list = os.listdir(path1)
+    if f_list != None:
+        f_list.sort()
+    for fname in f_list:
         if not fname.endswith(".vlog"): continue
         flabel = fname.split(".")[0]
         if flabel not in KLABEL: continue
@@ -118,7 +121,7 @@ def Process(path1,bBalance=False,bIsMulticlass=True,dropcolumns=[],transformers=
     data = None
     label = None
     sha1list = None
-    for fname in os.listdir(path1):
+    for fname in f_list:
         if not fname.endswith(".vlog"): continue
         flabel = fname.split(".")[0]
         if flabel not in KLABEL: continue
@@ -131,7 +134,6 @@ def Process(path1,bBalance=False,bIsMulticlass=True,dropcolumns=[],transformers=
             l1 = PrepareLabel1(d2.shape[0],ix)
         l2 = l1 #np.array(l1,dtype="uint8")
         s2 = np.array(s1,dtype="object")
-        print l2
         if data is None:
             data = d2
             label = l2
@@ -186,6 +188,15 @@ def perf_measure(y_actual, y_hat,focusix):
 
     return(TP, FP, TN, FN)
 
+import scipy as sp
+def logloss(act, pred):
+    epsilon = 1e-15
+    pred = sp.maximum(epsilon, pred)
+    pred = sp.minimum(1-epsilon, pred)
+    ll = sum(act*sp.log(pred) + sp.subtract(1,act)*sp.log(sp.subtract(1,pred)))
+    ll = ll * -1.0/len(act)
+    return ll
+
 def MyEvaluation(y_test,predicted):
 
     def norm_me(x):
@@ -213,7 +224,8 @@ def MyEvaluation(y_test,predicted):
 
     v_precision = 0 if (TP+FP)==0 else TP*1.0/(TP+FP)
     v_recall = 0 if (TP+FN)==0  else  TP*1.0/(TP+FN)
-    logging.info("#\tKLABEL:"+str( KLABEL)+ str((v_precision,v_recall,TP, FP, TN, FN)))
+    mylogloss = logloss(y_test,predicted)
+    logging.info("#\tKLABEL:"+str( KLABEL)+ str((v_precision,v_recall,TP, FP, TN, FN)) +str(mylogloss))
 
     return v_precision,v_recall,TP, FP, TN, FN
 
@@ -283,6 +295,7 @@ class LogData:
         self.logTest = ()
         self.logTransformerID = ()
         self.logDropcolumns = ()
+        self.logRandom = ()
 
     def getLogList(self):
         logs = [attr for attr in dir(LogData()) if not callable(attr) and not attr.startswith("__")]
@@ -294,7 +307,7 @@ class LogData:
 
         Log(self.logCMD + self.logData + self.logEXP + self.logLoad + self.logTrainingErr +
                 self.logValidationErr + self.logPrecision + self.logRecall + self.logR4N +
-                self.logTrainingTime + self.logModel + self.logNote + self.logSave + self.logTest + self.logBVT + self.logTransformerID + self.logDropcolumns )
+                self.logTrainingTime + self.logModel + self.logNote + self.logSave + self.logTest + self.logBVT + self.logTransformerID + self.logDropcolumns + self.logRandom)
 
 def CalcF1Score(p,r):
     if (p+r)==0: return 0
@@ -332,7 +345,7 @@ def DoKFold(data,label,myLearnandValidate):
 
     return f1,model
 
-def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False):
+def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False,shaper=None):
 
     global B_MULTICLASS
     B_MULTICLASS = bIsMulticlass
@@ -358,11 +371,20 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False):
                 logging.warning("dropcolumns parameters error:%s",item)
         elif item =='release':
             release()
+        elif item.startswith("randomstate="):
+            global RANDOM_STATE
+            try:
+                rs = int( item.split("=")[1] )
+                RANDOM_STATE = rs
+            except:
+                rs = 0
 
 
     # LOAD DATA
     t0 = timeit.default_timer()
     data, label, sha1list= Process(path1,bBalance,bIsMulticlass,dropcolumns,transformer)
+    if not shaper is None:
+        data = shaper(data)
 
     t1 = timeit.default_timer()
 
@@ -375,18 +397,20 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False):
     # LOAD Test Data
     if os.path.exists(os.path.join(path1, 'test')):
         tdata, tlabel, tsha1 = Process(os.path.join(path1, 'test'), bBalance, bIsMulticlass, dropcolumns, transformer)
+        if not shaper is None:
+            tdata = shaper(tdata)
     else:
         tdata, tlabel, tsha1 = None, None, None
 
     # Test using the best fold
     f3,vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN = 0,0,0,0,0,0,0
-    if not tdata is None and not model_bv is None:
+    if not tdata is None and not model_bv is None:    
         predicted_vb = model_bv.predict(tdata)
         vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN = MyEvaluation(tlabel,predicted_vb)
         f3 = CalcF1Score(vb_precision,vb_recall)
 
     # TRAINING and TESTING
-    score0,score1,t_precision,t_recall,tTP, tFP, tTN, tFN, model = myLearnandValidate(data,label,tdata,tlabel,False)
+    score0,score1,t_precision,t_recall,tTP, tFP, tTN, tFN, model = myLearnandValidate(data,label,tdata,tlabel,True)
     f4 = CalcF1Score(t_precision,t_recall)
     logging.info("#\tF1Score: BestFold: %s\tAllData: %s",str(f3),str(f4))
 
@@ -427,6 +451,7 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False):
     logdata.logBVT = ("BVT",vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN)
     logdata.logTransformerID = ("TFM",transformerid)
     logdata.logDropcolumns = ("DP",dropstring)
+    logdata.logRandom = ("RS",RANDOM_STATE)
     return logdata
 
 
