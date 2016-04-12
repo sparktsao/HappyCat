@@ -1,6 +1,6 @@
 # HappyCat
 
-<img align="right" src="https://github.com/sparktsao/HappyCat/blob/master/happycat.jpg?raw=true">
+<img align="right" src="https://github.com/sparktsao/HappyCat/blob/w1/happycat.jpg">
 ## Introduction
 * a example project about machine leanring
 
