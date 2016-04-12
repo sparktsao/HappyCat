@@ -62,10 +62,10 @@ def TrainAndValidation1(X_train,y_train,X_test,y_test,bEarlyStopByTestData=True)
     model.fit(X_train,y_train.ravel())
     if not X_test is None:
         predicted = model.predict(X_test)
-        v_precision,v_recall,TP, FP, TN, FN = sparkcore.MyEvaluation(y_test,predicted)
-        return 0,0,v_precision,v_recall,TP, FP, TN, FN, model
+        v_precision,v_recall,TP, FP, TN, FN,thelogloss = sparkcore.MyEvaluation(y_test,predicted)
+        return 0,0,v_precision,v_recall,TP, FP, TN, FN,thelogloss, model
     else:
-        return 0,0,0,0,0,0,0,0, model
+        return 0,0,0,0,0,0,0,0,0, model
 
 
 if  __name__ == '__main__':    

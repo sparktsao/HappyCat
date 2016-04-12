@@ -41,6 +41,7 @@ ARR_rtime = []
 ARR_tr_precision = []
 ARR_tr_recall = []
 ARR_4N = []
+APR_logloss = []
 #========================================
 
 class Transformer:
@@ -189,15 +190,38 @@ def perf_measure(y_actual, y_hat,focusix):
     return(TP, FP, TN, FN)
 
 import scipy as sp
-def logloss(act, pred):
+def logloss_1(act, pred):
+    act = act.flatten()
+    pred = pred.flatten()
     epsilon = 1e-15
     pred = sp.maximum(epsilon, pred)
     pred = sp.minimum(1-epsilon, pred)
     ll = sum(act*sp.log(pred) + sp.subtract(1,act)*sp.log(sp.subtract(1,pred)))
     ll = ll * -1.0/len(act)
     return ll
+def myargmax(x):
+    ret = [0.0]*len(x)
+    import numpy
+    id = numpy.argmax(x)
+    ret[id] = 1.0
+    return ret
+
+
+def logloss(act,pred):
+    #import numpy
+    #pred1 = numpy.asarray( [myargmax(x) for x in pred] )
+    ##print pred1, pred, act
+    #r1 = logloss_1(act,pred1)
+    r2 = logloss_1(act,pred)
+    #print r1,r2
+    return r2
+
+
+
+
 
 def MyEvaluation(y_test,predicted):
+    mylogloss = logloss(y_test,predicted)
 
     def norm_me(x):
         if 'int' in str(type(x)):
@@ -224,10 +248,9 @@ def MyEvaluation(y_test,predicted):
 
     v_precision = 0 if (TP+FP)==0 else TP*1.0/(TP+FP)
     v_recall = 0 if (TP+FN)==0  else  TP*1.0/(TP+FN)
-    mylogloss = logloss(y_test,predicted)
-    logging.info("#\tKLABEL:"+str( KLABEL)+ str((v_precision,v_recall,TP, FP, TN, FN)) +str(mylogloss))
+    logging.info("#\tKLABEL:"+str( KLABEL)+ str((v_precision,v_recall,TP, FP, TN, FN)) +" logloss:"+str(mylogloss))
 
-    return v_precision,v_recall,TP, FP, TN, FN
+    return v_precision,v_recall,TP, FP, TN, FN, mylogloss
 
 def getSaveNames(learner,datapath,note,score):
 
@@ -287,6 +310,7 @@ class LogData:
         self.logPrecision = ()# ('Precision',precision_arr,np.mean(precision_arr),np.std(precision_arr))
         self.logRecall =  ()# ('Recall',recall_arr,np.mean(recall_arr),np.std(recall_arr))
         self.logR4N =  ()#("T",FourT_arr)
+        self.loglogloss = ()
         self.logBVT = ()# BestValidationTest
         self.logTrainingTime = ()# ('Time',timearr,np.mean(timearr) )
         self.logModel =  ()# ('DEEP',DEEP_AVF,DEEP_DROPOUTR,DEEP_SGDLR,DEEP_EPOCH,DEEP_BSIZE,D_CLASS_NORMALW)
@@ -306,7 +330,7 @@ class LogData:
         self.logSave = ("SAVE",":".join( [str(x) for x in self.logSave] ) )
 
         Log(self.logCMD + self.logData + self.logEXP + self.logLoad + self.logTrainingErr +
-                self.logValidationErr + self.logPrecision + self.logRecall + self.logR4N +
+                self.logValidationErr + self.logPrecision + self.logRecall + self.logR4N + self.loglogloss +
                 self.logTrainingTime + self.logModel + self.logNote + self.logSave + self.logTest + self.logBVT + self.logTransformerID + self.logDropcolumns + self.logRandom)
 
 def CalcF1Score(p,r):
@@ -326,13 +350,14 @@ def DoKFold(data,label,myLearnandValidate):
         X_test = data[validix]
         y_test = label[validix]
 
-        score0,score1,v_precision,v_recall,TP, FP, TN, FN, model = myLearnandValidate(X_train,y_train,X_test,y_test)
+        score0,score1,v_precision,v_recall,TP, FP, TN, FN, mylogloss, model = myLearnandValidate(X_train,y_train,X_test,y_test)
 
         ARR_score0.append(score0)
         ARR_score1.append(score1)
         ARR_4N.append( ",".join([str(x) for x in (TP, FP, TN, FN)] ) )
         ARR_tr_precision.append(v_precision)
         ARR_tr_recall.append(v_recall)
+        APR_logloss.append(mylogloss)
 
         t3 = timeit.default_timer()
         ARR_rtime.append(t3-t2)
@@ -341,7 +366,7 @@ def DoKFold(data,label,myLearnandValidate):
         if f1>f1max:
             f1max = f1
             model = model
-        logging.info( "#\t %s %s %s %s %s %s %s",str(f1),str(v_precision),str(v_recall),str(TP), str(FP), str(TN), str(FN))
+        logging.info( "#\t %s %s %s %s %s %s %s %s",str(f1),str(v_precision),str(v_recall),str(TP), str(FP), str(TN), str(FN),str(mylogloss))
 
     return f1,model
 
@@ -406,11 +431,11 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False,shaper=None):
     f3,vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN = 0,0,0,0,0,0,0
     if not tdata is None and not model_bv is None:    
         predicted_vb = model_bv.predict(tdata)
-        vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN = MyEvaluation(tlabel,predicted_vb)
+        vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN, vblogloss = MyEvaluation(tlabel,predicted_vb)
         f3 = CalcF1Score(vb_precision,vb_recall)
 
     # TRAINING and TESTING
-    score0,score1,t_precision,t_recall,tTP, tFP, tTN, tFN, model = myLearnandValidate(data,label,tdata,tlabel,True)
+    score0,score1,t_precision,t_recall,tTP, tFP, tTN, tFN,tlogloss, model = myLearnandValidate(data,label,tdata,tlabel,True)
     f4 = CalcF1Score(t_precision,t_recall)
     logging.info("#\tF1Score: BestFold: %s\tAllData: %s",str(f3),str(f4))
 
@@ -428,7 +453,8 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False,shaper=None):
             fpredict.write(sha1+","+str(p)+"\n")
         fpredict.close()
 
-    logging.info("#\tLearning success! prepare to return logs")
+    tfinal = timeit.default_timer()
+    logging.info("#\tLearning success! prepare to return logs :take %s",str(tfinal-t1))
 
     # LOG
     logdata = LogData()
@@ -444,11 +470,12 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False,shaper=None):
     logdata.logPrecision = ('Precision',ARR_tr_precision,np.mean(ARR_tr_precision),np.std(ARR_tr_precision))
     logdata.logRecall =  ('Recall',ARR_tr_recall,np.mean(ARR_tr_recall),np.std(ARR_tr_recall))
     logdata.logR4N =  ("R4N",ARR_4N)
+    logdata.loglogloss = ("LOGLOSS",APR_logloss)
     logdata.logTrainingTime =  ('TTime',ARR_rtime,np.mean(ARR_rtime) )
     logdata.logNote =   ('NOTE',NOTE)
-    logdata.logTest = ("Test",t_precision,t_recall,tTP, tFP, tTN, tFN)
+    logdata.logTest = ("Test",t_precision,t_recall,tTP, tFP, tTN, tFN,tlogloss)
     logdata.logSave = (fnameMODEL,fnameWeight)
-    logdata.logBVT = ("BVT",vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN)
+    logdata.logBVT = ("BVT",vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN, vblogloss)
     logdata.logTransformerID = ("TFM",transformerid)
     logdata.logDropcolumns = ("DP",dropstring)
     logdata.logRandom = ("RS",RANDOM_STATE)
