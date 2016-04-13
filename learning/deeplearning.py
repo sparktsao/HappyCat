@@ -1,5 +1,5 @@
 #---------------------------
-# Spark_Tsao@trend.com.tw
+# Spark Tsao
 #---------------------------
 
 import os
@@ -61,7 +61,6 @@ def TrainAndValidation1(X_train,y_train,X_test,y_test,bEarlyStopByTestData=True)
     model.compile(loss=DEEP_LOSSFUNC, optimizer=sgd)
     
     a = model.fit(X_train, y_train,nb_epoch=5)
-    print a
     score0 = model.evaluate(X_train, y_train, batch_size=DEEP_BSIZE)
 
     if not X_test is None:
