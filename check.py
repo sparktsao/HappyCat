@@ -43,4 +43,4 @@ from keras.models import model_from_json
 model2 = model_from_json(json_string)
 model2.load_weights("check.hdf5")
 print model2.predict(numpy.asarray([[0.1,0.2,0.3]]))
-
+print "check success"
