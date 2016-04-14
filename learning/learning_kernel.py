@@ -428,7 +428,7 @@ def ExpFunc(path1,myLearnandValidate,bIsMulticlass=False,shaper=None):
         tdata, tlabel, tsha1 = None, None, None
 
     # Test using the best fold
-    f3,vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN = 0,0,0,0,0,0,0
+    f3,vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN,vblogloss = 0,0,0,0,0,0,0,0
     if not tdata is None and not model_bv is None:    
         predicted_vb = model_bv.predict(tdata)
         vb_precision,vb_recall,vbTP, vbFP, vbTN, vbFN, vblogloss = MyEvaluation(tlabel,predicted_vb)
