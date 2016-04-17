@@ -27,20 +27,30 @@ print ",".join(info)
 
 from keras.models import Sequential
 from keras.layers.core import Dense
-X_train = numpy.asarray([[0.1,0.2,0.3],[0.4,0.5,0.6]])
-y_train = numpy.asarray([0,1])
+from keras.layers.core import Dense, Dropout, Activation
+#X_train = numpy.asarray([[0.1,0.2,0.3],[0.4,0.5,0.6]])
+#y_train = numpy.asarray([0,1])
+
+X_train = numpy.asarray([[0.1],[0.2],[0.3],[0.4],[0.5],[0.6],[0.7],[0.8]])
+y_train = numpy.asarray([0,0,0,1,1,1,1,1])
+
+
+
 model = Sequential()
-model.add(Dense(output_dim=64,input_dim=X_train.shape[1], init='uniform'))
+model.add(Dense(output_dim=1,input_dim=X_train.shape[1], init='uniform'))
 model.add(Dense(1))
+model.add(Activation('linear'))
+model.add(Activation('softmax'))
 from keras.optimizers import SGD
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss="mean_squared_error",optimizer=sgd)
 model.fit(X_train,y_train)
+
 json_string = model.to_json()
 model.save_weights("check.hdf5",overwrite=True)
 
 from keras.models import model_from_json
 model2 = model_from_json(json_string)
 model2.load_weights("check.hdf5")
-print model2.predict(numpy.asarray([[0.1,0.2,0.3]]))
+print model2.predict(numpy.asarray([[0.9],[0.5],[0.11]]))
 print "check success"
