@@ -21,23 +21,15 @@ import pandas
 
 import learning_kernel as sparkcore
 
-#========================================
-# General parameters
-sparkcore.bBalance = False
-dropcolumns = []
-#========================================
-
 if len(sys.argv)>=2:
     path1 = sys.argv[1]
 else:
-    print "Please run as %s vlog-folder" % sys.argv[0]
+    print "Please run as:  %s vlog-folder [number of fold] [notes]" % sys.argv[0]
     exit(1)
 if len(sys.argv)>=3:
     sparkcore.nb_folds = int(sys.argv[2])
 if len(sys.argv)>=4:
     sparkcore.NOTE = sys.argv[3]
-if len(sys.argv)>=5:
-    dropcolumns= sys.argv[4].split(",")
 
 class RandomCat:
     def fit(self,trainingdata,traininglabel):

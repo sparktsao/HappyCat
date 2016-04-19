@@ -189,36 +189,11 @@ def perf_measure(y_actual, y_hat,focusix):
 
     return(TP, FP, TN, FN)
 
-import scipy as sp
-def logloss_1(act, pred):
-    act = act.flatten()
-    pred = pred.flatten()
-    epsilon = 1e-15
-    pred = sp.maximum(epsilon, pred)
-    pred = sp.minimum(1-epsilon, pred)
-    ll = sum(act*sp.log(pred) + sp.subtract(1,act)*sp.log(sp.subtract(1,pred)))
-    ll = ll * -1.0/len(act)
-    return ll
-def myargmax(x):
-    ret = [0.0]*len(x)
-    import numpy
-    id = numpy.argmax(x)
-    ret[id] = 1.0
-    return ret
-
 
 def logloss(act,pred):
-    #import numpy
-    #pred1 = numpy.asarray( [myargmax(x) for x in pred] )
-    ##print pred1, pred, act
-    #r1 = logloss_1(act,pred1)
-    r2 = logloss_1(act,pred)
-    #print r1,r2
+    from sklearn.metrics import log_loss
+    r2 = log_loss(act,pred)
     return r2
-
-
-
-
 
 def MyEvaluation(y_test,predicted):
     mylogloss = logloss(y_test,predicted)
@@ -288,8 +263,40 @@ def Dump(model,fnameMODEL,fnameWeight):
     else:
         logging.warning("unkown model type:"+str(type(model))+" found, your should implement your DumpFunction")
 
+def getversioninfo():
+    info = []
+    import os
+    import platform
+    import scipy
+    import sklearn
+    import theano
+    import keras
+    import h5py
+    info.append(sys.argv[0])
+    info.append(",versions,")
+    info.append("os"+os.name+",")
+    info.append(platform.system())
+    info.append(platform.release())
+    info.append( "numpy"+np.__version__ )
+    info.append( "scipy"+scipy.__version__)
+    info.append( "pandas"+pandas.__version__)
+    info.append( "sklearn"+sklearn.__version__)
+    info.append( "theano"+theano.__version__)
+    info.append( "keras"+keras.__version__)
+    info.append( "h5py"+h5py.__version__)
+    return ",".join(info)
+
 def Log(message):
+    import os.path
+    bPrintHeader = False
+    if False == os.path.exists(OUTPUT_DLOG_NAME):
+        bPrintHeader = True
     with open(OUTPUT_DLOG_NAME, 'a') as fout:
+        if bPrintHeader:
+            print >>fout, '#'+getversioninfo()
+            header1 = ["CMD","Learner","TrainingData","DATA","DataShape","LOAD","TStart","LoadTime","TrainErr","TrainErrArr","TrainErrMean","TrainErrStd","TrainErr","TrainErrArr","TrainErrMean","TrainErrStd","Precision","PrecisionArray","PrecisionMean","PrecisionSTD","Recall","RecallArray","RecallMean","RecallSTD","Result","ResultArray","logloss","loglossarr","Time","FoldTimeArray","FoldTimeMean","MODEL","MODELP","Note","EXP_NOTE","SAVE","SAVEDATA","Test","TestPrecision","TestRecall","TTP","TFP","TTN","TFN","TLOGLOSS","BVT","BVTestPrecision","BVTestRecall","BVTTP","BVTFP","BVTTN","BVTFN","BVLOGLOSS","TF","TFID","DP","DPID","RandomSeed","RSID"]
+            #print >>fout, '\t'.join(header1)
+        
         print >>fout, '\t'.join([str(x) for x in message])
 
 def release():
