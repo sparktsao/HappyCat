@@ -1,78 +1,114 @@
-# date: 2016/04/01
-# username: spark
-# description: learning fundation
+"""Train a baseline malware classifier on HappyCat `.vlog` datasets.
 
-import os
-import sys
+Example:
+    python learning/happycat.py --dataset dataset/unittest --folds 3 --run-name unittest
+"""
 
-import numpy as np
-import timeit
+from __future__ import annotations
 
-from keras.utils import np_utils, generic_utils
-from keras.models import Sequential
-from keras.layers.core import Dense, Dropout, Activation
-from keras.optimizers import SGD
-from keras.callbacks import EarlyStopping
-from keras.callbacks import Callback
+import argparse
+from pathlib import Path
+from statistics import mean
 
-from sklearn.cross_validation import KFold
-
-import pandas
-
-import learning_kernel as sparkcore
-
-#========================================
-# General parameters
-sparkcore.bBalance = False
-dropcolumns = []
-#========================================
-
-if len(sys.argv)>=2:
-    path1 = sys.argv[1]
-else:
-    print "Please run as %s vlog-folder" % sys.argv[0]
-    exit(1)
-if len(sys.argv)>=3:
-    sparkcore.nb_folds = int(sys.argv[2])
-if len(sys.argv)>=4:
-    sparkcore.NOTE = sys.argv[3]
-if len(sys.argv)>=5:
-    dropcolumns= sys.argv[4].split(",")
-
-class RandomCat:
-    def fit(self,trainingdata,traininglabel):
-        return 0
-    def predict(self,testdata):
-        import random
-        r = [random.randint(0,1) for x in testdata]
-        return np.asarray(r)
-    def to_json(self):
-        return "meow"
-    def save_weights(self,a,overwrite=True):
-        return "meow"
-       
-def TrainAndValidation1(X_train,y_train,X_test,y_test,bEarlyStopByTestData=True):
-    
-    print "Training shape:" , X_train.shape
-    print "Training label:" , y_train.shape   
-
-    model = RandomCat() 
-    model.fit(X_train,y_train.ravel())
-    if not X_test is None:
-        predicted = model.predict(X_test)
-        v_precision,v_recall,TP, FP, TN, FN = sparkcore.MyEvaluation(y_test,predicted)
-        return 0,0,v_precision,v_recall,TP, FP, TN, FN, model
-    else:
-        return 0,0,0,0,0,0,0,0, model
+from learning_kernel import (
+    build_model,
+    cross_validate,
+    evaluate,
+    load_dataset,
+    save_artifacts,
+)
 
 
-if  __name__ == '__main__':    
-    bMulticlass = False
-    logdata = sparkcore.ExpFunc(path1,TrainAndValidation1,bMulticlass,dropcolumns)
-    #============================================================================================    
-    logdata.logModel = ("")
-    #============================================================================================
-    logdata.doprint()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="HappyCat baseline training entrypoint")
+    parser.add_argument("--dataset", required=True, help="Path to dataset directory")
+    parser.add_argument("--folds", type=int, default=5, help="Number of CV folds")
+    parser.add_argument("--run-name", default="happycat", help="Name prefix for saved artifacts")
+    parser.add_argument(
+        "--output-dir",
+        default="artifacts",
+        help="Directory to save model and metrics artifacts",
+    )
+    parser.add_argument(
+        "--drop-columns",
+        default="",
+        help="Comma-separated 1-based feature indices to remove (example: 1,2,5)",
+    )
+    parser.add_argument(
+        "--test-subdir",
+        default="test",
+        help="Optional test sub-directory inside --dataset",
+    )
+    return parser.parse_args()
 
 
+def _parse_drop_columns(raw: str) -> list[int]:
+    if not raw.strip():
+        return []
+    return [int(piece.strip()) for piece in raw.split(",") if piece.strip()]
 
+
+def main() -> None:
+    args = parse_args()
+    drop_columns = _parse_drop_columns(args.drop_columns)
+
+    train_data = load_dataset(args.dataset, drop_columns=drop_columns)
+
+    cv_results = cross_validate(train_data, folds=args.folds)
+    cv_summary = {
+        "precision_mean": mean([r.precision for r in cv_results]),
+        "recall_mean": mean([r.recall for r in cv_results]),
+        "f1_mean": mean([r.f1 for r in cv_results]),
+    }
+
+    model = build_model()
+    model.fit(train_data.features, train_data.labels)
+
+    train_eval = evaluate(model, train_data.features, train_data.labels)
+
+    metrics: dict = {
+        "dataset": args.dataset,
+        "folds": args.folds,
+        "drop_columns": drop_columns,
+        "cv_summary": cv_summary,
+        "train": {
+            "precision": train_eval.precision,
+            "recall": train_eval.recall,
+            "f1": train_eval.f1,
+            "confusion_matrix": train_eval.confusion.tolist(),
+            "classification_report": train_eval.report,
+        },
+    }
+
+    test_dir = Path(args.dataset) / args.test_subdir
+    if test_dir.exists():
+        test_data = load_dataset(test_dir, drop_columns=drop_columns)
+        test_eval = evaluate(model, test_data.features, test_data.labels)
+        metrics["test"] = {
+            "precision": test_eval.precision,
+            "recall": test_eval.recall,
+            "f1": test_eval.f1,
+            "confusion_matrix": test_eval.confusion.tolist(),
+            "classification_report": test_eval.report,
+        }
+
+    model_path, metrics_path = save_artifacts(
+        model,
+        metrics,
+        output_dir=args.output_dir,
+        run_name=args.run_name,
+    )
+
+    print("=== Cross-validation summary ===")
+    print(cv_summary)
+    print("=== Train report ===")
+    print(train_eval.report)
+    if "test" in metrics:
+        print("=== Test report ===")
+        print(metrics["test"]["classification_report"])
+    print(f"Saved model: {model_path}")
+    print(f"Saved metrics: {metrics_path}")
+
+
+if __name__ == "__main__":
+    main()
