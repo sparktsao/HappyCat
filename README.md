@@ -1,6 +1,6 @@
 # HappyCat
 
-A compact, recruiter-friendly machine learning project that demonstrates a clean malware-classification workflow on tabular features.
+A compact machine learning project that demonstrates a clean malware-classification workflow on tabular features.
 
 ![HappyCat](happycat.jpg)
 
