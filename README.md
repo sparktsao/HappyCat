@@ -1,26 +1,38 @@
 # HappyCat
 
-A compact machine learning project that demonstrates a clean malware-classification workflow on tabular features.
+HappyCat is an educational malware-classification demo originally created in 2016 during early company-wide machine learning adoption.
 
 ![HappyCat](happycat.jpg)
 
-## What this project shows
+## Background
 
-- Binary classification (`normal` vs `malicious`) on `.vlog` feature files.
-- Reproducible training with deterministic shuffling and model configuration.
-- K-fold cross-validation, train/test evaluation, and metrics serialization.
-- Production-like outputs (`.pkl` model + `.json` metrics) in an artifacts directory.
+This project was built to help engineers understand practical classification workflows in a production-adjacent context at a time when formal MLOps practices were not yet common in the field.
+
+The current codebase keeps that educational intent while presenting the workflow with cleaner structure and reproducible execution.
+
+## Overview
+
+HappyCat provides a concise end-to-end pipeline for binary malware classification (`normal` vs `malicious`) using `.vlog` feature files.
+
+Core characteristics:
+
+- deterministic data loading and shuffling,
+- configurable K-fold cross-validation,
+- train/test evaluation with precision, recall, F1, and confusion matrix,
+- persisted outputs for model (`.pkl`) and metrics (`.json`).
 
 ## Project structure
 
-- `learning/happycat.py`: training entrypoint and CLI.
-- `learning/learning_kernel.py`: data loading, model building, CV, and artifact saving.
-- `dataset/unittest/`: sample dataset.
+- `learning/happycat.py`: CLI entrypoint for training and evaluation.
+- `learning/learning_kernel.py`: dataset loading, model building, evaluation, cross-validation, and artifact persistence.
+- `dataset/unittest/`: sample dataset used for local runs.
 
 ## Requirements
 
 - Python 3.9+
-- `numpy`, `pandas`, `scikit-learn`
+- `numpy`
+- `pandas`
+- `scikit-learn`
 
 Install dependencies:
 
@@ -30,7 +42,7 @@ pip install -r requirements.txt
 
 ## Quickstart
 
-From repository root:
+Run from repository root:
 
 ```bash
 python learning/happycat.py \
@@ -39,12 +51,12 @@ python learning/happycat.py \
   --run-name unittest_demo
 ```
 
-Outputs:
+Expected outputs:
 
 - `artifacts/unittest_demo_model.pkl`
 - `artifacts/unittest_demo_metrics.json`
 
-## Example command options
+## Additional options
 
 ```bash
 python learning/happycat.py \
