@@ -67,6 +67,13 @@ python learning/happycat.py \
   --run-name my_experiment
 ```
 
-## Design notes
+## Notes for interview/review context
 
-The default model is a well-understood baseline (`LogisticRegression`) with balanced class weights and deterministic configuration. The code is intentionally structured for maintainability and extension.
+This project intentionally uses a **strong baseline model** (`LogisticRegression`) and emphasizes:
+
+- readability,
+- reproducibility,
+- metrics quality,
+- and clean CLI ergonomics.
+
+That keeps the repository focused on software engineering quality while still demonstrating practical ML workflow fundamentals.
